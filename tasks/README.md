@@ -87,13 +87,15 @@ are authorized by Task 024.
 | [038](038_methods_documentation.md) | Documentation only | Complete |
 | [038A](038a_ci_help_text.md) | CI test repair | Complete |
 | [038B](038b_repository_naming.md) | Documentation naming | Complete |
-| [038C](038c_openearthmap_initialization.md) | Model initialization / comparison recipe | Complete |
-| [038D](038d_openearthmap_comparison_runner.md) | Bash experiment/report runner | Complete |
-| [038E](038e_ade20k_initialization.md) | ADE20K initialization / runner | Complete |
+| [038C](038c_openearthmap_initialization.md) | Model initialization / comparison recipe | Complete; implementation retired |
+| [038D](038d_openearthmap_comparison_runner.md) | Bash experiment/report runner | Complete; implementation retired |
+| [038E](038e_ade20k_initialization.md) | ADE20K initialization / runner | Complete; implementation retired |
+| [038F](038f_dinov3_comparison.md) | DINOv3 encoder/spectral comparison | Complete; implementation retired |
+| [038G](038g_retire_pretraining_experiments.md) | Experiment summary and retirement | Complete |
 | [040](040_shore_distance_diagnostics.md) | Preparation/reporting | Complete |
 | [041](041_distance_weighted_bce_experiment.md) | Training experiment | Complete |
 
-038 and the bounded 038C–038E initialization and runner additions are complete. Pending execution order
+038C–038F are historical experiments preserved before retirement in 038G. Pending execution order
 is **039 → 042**. Task 039 (new-region
 recipes, formerly 038) and Task 042 (final handoff, formerly 039) remain roadmap
 slots in [docs/todo.md](../docs/todo.md), to be contracted when selected.
@@ -140,5 +142,3 @@ Keep each task narrow enough to complete and verify in one window. If new work
 materially expands scope, write a new task rather than silently widening the
 active one. Analysis-only threshold or policy tasks should stop for user review
 when their acceptance criteria require a decision.
-
-- [038F](038f_dinov3_comparison.md): DINOv3 false-color/eight-band comparison — Complete.

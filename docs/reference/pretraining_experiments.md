@@ -7,8 +7,8 @@ close to the false-color B0 reference, but neither DINOv3 encoder improved poole
 validation IoU. OpenEarthMap has an incomplete run record and no finished report.
 
 These experiments were reviewed and retired at the user's request. Their code,
-recipes and launchers were committed before removal. The preservation commit
-and recovery instructions are recorded in [Task 038G](../../tasks/038g_retire_pretraining_experiments.md).
+recipes and launchers were committed before removal. The preservation commit is `c5553dfa96f4f8c1017ed2e06fcb83eeb3152628`;
+recovery instructions are recorded in [Task 038G](../../tasks/038g_retire_pretraining_experiments.md).
 External runs, checkpoints and reports remain outside Git and were not deleted.
 The maintained toolkit retains ordinary ImageNet/random MiT B0–B3 support;
 DINOv3 models require the archived implementation for reconstruction.

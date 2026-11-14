@@ -98,16 +98,11 @@ def _inputs(tmp_path):
         (LossTerm("boundary_bce", weight=0.7), LossTerm("dice", weight=0.3)),
     ],
 )
-@pytest.mark.parametrize(
-    "model_weights", [None, "openearthmap_b0", "ade20k_b0_encoder", "ade20k_b0_full"]
-)
 def test_preview_budget_no_arrays_no_outputs_and_initial_collision(
-    tmp_path, monkeypatch, losses, model_weights
+    tmp_path, monkeypatch, losses
 ):
     settings, paths = _inputs(tmp_path)
-    settings = replace(
-        settings, losses=losses, encoder_name="mit_b0", model_weights=model_weights
-    )
+    settings = replace(settings, losses=losses)
 
     def forbidden(*args, **kwargs):
         raise AssertionError("Preview must not open arrays or construct a model")
@@ -115,7 +110,6 @@ def test_preview_budget_no_arrays_no_outputs_and_initial_collision(
     monkeypatch.setattr(np, "load", forbidden)
     monkeypatch.setattr(run, "TrainingModule", forbidden)
     report = run.run_training(settings, paths, run_id="preview", dry_run=True)
-    assert report["initialization"]["source"] == (model_weights or "random")
     assert not (paths.runs_root / "preview").exists()
     assert report["budget"]["optimizer_updates_total"] == 4
     assert report["loss"] == {
@@ -308,18 +302,9 @@ def test_recipe_only_cli_resolves_machine_paths_and_previews_auto_id(
     assert "--run-id" not in help_result.stdout
 
 
-@pytest.mark.parametrize(
-    ("workers", "deterministic", "model_weights"),
-    [
-        (0, True, None),
-        (2, False, None),
-        (0, True, "openearthmap_b0"),
-        (0, True, "ade20k_b0_encoder"),
-        (0, True, "ade20k_b0_full"),
-    ],
-)
+@pytest.mark.parametrize(("workers", "deterministic"), [(0, True), (2, False)])
 def test_completed_epoch_runner_resume_and_recipe_cli_preview(
-    tmp_path, monkeypatch, workers, deterministic, model_weights
+    tmp_path, monkeypatch, workers, deterministic
 ):
     """Resume the actual runner without new identity or pretrained initialization."""
     from lightning.pytorch.callbacks import Callback
@@ -335,16 +320,12 @@ def test_completed_epoch_runner_resume_and_recipe_cli_preview(
         num_workers=workers,
         persistent_workers=bool(workers),
         deterministic=deterministic,
-        encoder_name="mit_b0",
-        model_weights=model_weights,
     )
     native_trainer = run.Trainer
     observed_initialization = []
 
     def small_model(settings):
-        observed_initialization.append(
-            (settings.encoder_weights, settings.model_weights)
-        )
+        observed_initialization.append(settings.encoder_weights)
         return TrainingModule(settings, torch.nn.Conv2d(3, 1, 1))
 
     class InterruptAfterEpoch(Callback):
@@ -425,9 +406,7 @@ def test_completed_epoch_runner_resume_and_recipe_cli_preview(
         assert result["optimizer_updates_actual"] == 4
         assert result["best_validation_iou"] == 1.0
         assert torch.load(result["best_checkpoint"], weights_only=False)["epoch"] == 0
-        assert observed_initialization[0] == (None, model_weights)
-        assert observed_initialization[-1] == (None, None)
-        assert result["initialization"]["source"] == (model_weights or "random")
+        assert observed_initialization[-1] is None
         assert Path(result["model_bundle"], "weights.pt").is_file()
         assert (relocated / "same-run" / "metrics" / "metrics.csv").is_file()
         assert "resume-" in result["validation_csv"]

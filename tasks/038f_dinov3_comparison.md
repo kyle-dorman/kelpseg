@@ -2,6 +2,12 @@
 
 Status: Complete
 
+> Historical implementation record. Experiment code/recipes were removed after
+> preservation in commit `c5553df`. Commands below describe the archived version,
+> not the maintained checkout. See [results](../docs/reference/pretraining_experiments.md)
+> and [recovery](038g_retire_pretraining_experiments.md#recovery).
+
+
 ## Abstract and scope
 
 Set up DINOv3 ViT-S/16 and ConvNeXt-Tiny encoders with fresh SegFormer

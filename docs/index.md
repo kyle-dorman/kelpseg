@@ -19,6 +19,7 @@ The [selected model](experiments.md#current-planet-8-band-b0-baseline) is the
 | Draft the paper methods | [Paper methods summary](paper_methods.md) |
 | Understand the implemented scientific workflow | [Methods](methods.md) |
 | Understand implemented pipeline boundaries | [Architecture](architecture.md) |
+| Review retired pretraining/encoder experiments | [Results and recovery](reference/pretraining_experiments.md) |
 | Identify models, runs and checkpoint rules | [Experiments](experiments.md) |
 | Find prior studies, audit evidence or retired code | [History](history.md) |
 

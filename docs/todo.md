@@ -2,37 +2,11 @@
 
 ## Current status and next action
 
-Task **038G experiment summary and retirement is in progress**. Preserve all
-pretraining/DINOv3 experiment code and results in Git, then remove experimental
-implementation while retaining the summary and archive reference. See the
-[contract](../tasks/038g_retire_pretraining_experiments.md).
-
-Task **038F DINOv3 four-run comparison is complete**. All four variants passed
-bounded RTX 3090 memory checks and now use batch 12 with accumulation 2
-(effective 24). No full training was launched. Both ViT-S/16 and
-ConvNeXt-Tiny have false-color and eight-band recipes. The checked manual runner
-trains all four and compares with the existing false-color and eight-band B0
-models. No production training was launched. See the
-[usage](guides/training.md#dinov3-false-color-comparison) and
-[outcome](../tasks/038f_dinov3_comparison.md#extension-outcome).
-
-Task **038E ADE20K initialization comparison is complete**. Encoder-only and
-encoder/decoder B0 recipes plus the separate sequential Bash runner are checked
-and ready for manual execution after the current OpenEarthMap run finishes.
-The ADE20K experiments were not started. See [usage](guides/training.md#ade20k-b0-initialization-comparison)
-and the [outcome](../tasks/038e_ade20k_initialization.md#outcome).
-
-Task **038D OpenEarthMap comparison runner is complete**. The checked Bash
-runner is ready for the user to launch in an existing tmux shell; it trains the
-candidate and generates matching validation reports. Nothing was launched here.
-See [usage](guides/training.md#run-training-and-matching-validation-reports-in-tmux)
-and the [outcome](../tasks/038d_openearthmap_comparison_runner.md#outcome).
-
-Task **038C OpenEarthMap B0 initialization is complete**. The opt-in encoder/
-decoder initializer, matched B0 recipe and focused checks are ready for review;
-no experiment was launched. See the [outcome](../tasks/038c_openearthmap_initialization.md#outcome)
-and [usage](guides/training.md#openearthmap-b0-initialization-comparison).
-Training requires a later user instruction; the development roadmap is unchanged.
+Task **038G experiment summary and retirement is complete**. Experiment code
+and results were preserved in commit `c5553df`; experimental options, recipes
+and runners are removed. All 975 CPU tests and lint checks passed. See the
+[summary](reference/pretraining_experiments.md) and
+[task](../tasks/038g_retire_pretraining_experiments.md).
 
 Task **038B repository naming is complete**; current instructions use `kelpseg`.
 The [outcome](../tasks/038b_repository_naming.md#outcome) records validation and

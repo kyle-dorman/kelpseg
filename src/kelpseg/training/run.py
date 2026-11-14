@@ -22,7 +22,6 @@ from lightning.pytorch.loggers import CSVLogger, WandbLogger
 from torch.utils.data import DataLoader, default_collate
 
 from kelpseg.augmentation_pipeline import build_training_augmentation
-from kelpseg.initialization import initialization_metadata
 from kelpseg.model_bundle import export_model_bundle
 from kelpseg.paths import PathSettings
 from kelpseg.training.checkpoints import EpochCheckpoints
@@ -182,12 +181,6 @@ def run_training(
         "augmentation": build_training_augmentation(settings.seed).to_dict(),
         "normalization_scope": "kelp-positive with-BC training, capped at 5000",
         "model": f"SegFormer / {settings.encoder_name}",
-        "initialization": initialization_metadata(
-            settings.encoder_weights,
-            settings.model_weights,
-            settings.encoder_name,
-            len(settings.band_names),
-        ),
         "selection": "maximum pooled validation foreground IoU, earliest ties, threshold 0.5",
         "validation_weights": "current before optimizer update 101; EMA thereafter",
         "ema": {"decay": 0.999, "first_optimizer_update": 101},
@@ -291,9 +284,7 @@ def run_training(
         )
     try:
         model = TrainingModule(
-            replace(settings, encoder_weights=None, model_weights=None)
-            if resume is not None
-            else settings
+            replace(settings, encoder_weights=None) if resume is not None else settings
         )
         model.configure_diagnostics(inputs["val"].rows)
         callbacks = [

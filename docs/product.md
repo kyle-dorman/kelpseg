@@ -18,9 +18,8 @@ same native acquisitions: `planet8` (native eight), `planet4` (red/green/blue/ni
 orders and match source membership when comparing them.
 
 Completed spectral/BC/LORO comparisons are indexed in [history](history.md).
-DINOv3 was skipped for the completed study. The optional follow-up now compares
-ViT-S/16 and ConvNeXt-Tiny with fresh SegFormer decoders on both false-color
-NIR/red/green and native eight-band inputs; see the [recipes](guides/training.md#dinov3-false-color-comparison). Broad architecture sweeps, unrelated model families, backward
+The later OpenEarthMap/ADE20K initialization and DINOv3 encoder experiments
+were retired after review; see their [results](reference/pretraining_experiments.md). Broad architecture sweeps, unrelated model families, backward
 compatibility and exact historical training reproduction are outside scope.
 
 ## California target and temporal consistency

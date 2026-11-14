@@ -7,6 +7,7 @@ the maintained toolkit, start with the [quickstart](quickstart.md).
 
 | Work | Evidence owner |
 |---|---|
+| Pretraining and encoder comparisons; implementation retired | [Results](reference/pretraining_experiments.md), [Task 038G recovery](../tasks/038g_retire_pretraining_experiments.md) |
 | Original PS8B baseline/LORO study, Tasks 000–023 | [Historical task index](../tasks/README.md#historical-queue-tasks-000023) |
 | Legacy checkpoint reference and six-example capture | [Task 025](../tasks/025_capture_legacy_reference.md) |
 | Original collection audit and cleanup traces | [Historical provenance](cleanup_provenance.md), [Task 026](../tasks/026_inventory_originals_and_cleanup_provenance.md) |
