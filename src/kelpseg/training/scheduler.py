@@ -11,6 +11,7 @@ class LinearWarmupCosineDecayLR(LRScheduler):
     Lightning steps this after each optimizer update, including the final
     partial accumulation. Thus the first update uses zero LR, and the floor
     is the LR recorded after the final update, exactly as in the old scheduler.
+    Optional per-group lr_scale preserves the encoder/decoder ratio at the floor.
     """
 
     def __init__(self, optimizer, total_steps, warmup_steps, min_lr):
@@ -29,4 +30,10 @@ class LinearWarmupCosineDecayLR(LRScheduler):
             1.0,
         )
         scale = 0.5 * (1 + math.cos(math.pi * progress))
-        return [self.min_lr + (lr - self.min_lr) * scale for lr in self.base_lrs]
+        return [
+            self.min_lr * group.get("lr_scale", 1.0)
+            + (lr - self.min_lr * group.get("lr_scale", 1.0)) * scale
+            for lr, group in zip(
+                self.base_lrs, self.optimizer.param_groups, strict=True
+            )
+        ]

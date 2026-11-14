@@ -18,7 +18,7 @@ the complete bundle into a fresh external directory:
 ```bash
 (
   set -e
-  model_dir="$HOME/kelpseg-models/planet8-b0-epoch16-01"
+  model_dir="$HOME/kelpseg-models/planet8-b0-epoch 16-01"
   test ! -e "$model_dir"
   rclone copy kelp-box:kelpseg/runs/model-size-runs/planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z/model \
     "$model_dir" --immutable --size-only --ignore-checksum
@@ -37,7 +37,8 @@ not this selected baseline.
 The constructor default remains B3 and generic recipes may use smoothed
 BCE/Lovasz. Select the encoder and loss explicitly when reproducing the current
 B0 recipe; do not infer them from defaults. Supported encoders are `mit_b0`,
-`mit_b1`, `mit_b2` and `mit_b3`. Changing encoder starts a new experiment.
+`mit_b1`, `mit_b2`, `mit_b3`, `dinov3_vits16` and `dinov3_convnext_tiny`.
+Changing encoder starts a new experiment.
 
 ## Tracking and identity
 
@@ -142,8 +143,18 @@ Distinguish three operations:
   relevant averaging state for the same run and input identity.
 
 For new regions, identify the four cases in [product.md](product.md) separately.
-The installed `train` command currently starts from `encoder_weights = "imagenet"`
-or `"none"`, or resumes its own completed-epoch checkpoint. It has no recipe
+The installed `train` command starts from `encoder_weights = "imagenet"` or
+`"none"`; B0 also supports segmentation-trained initialization with
+`encoder_weights = "none"`. `model_weights = "openearthmap_b0"` transfers the
+OpenEarthMap encoder/decoder. `ade20k_b0_encoder` and `ade20k_b0_full` transfer
+the same pinned ADE20K-trained encoder with a fresh or pretrained decoder,
+respectively. All adapt RGB input kernels and retain a fresh binary head in the
+SMP architecture. See the [ADE20K comparison](guides/training.md#ade20k-b0-initialization-comparison)
+for the two controlled recipes and separate sequential runner. Run and bundle metadata record the source revision and transfer
+policy. The [matched comparison recipe](guides/training.md#openearthmap-b0-initialization-comparison)
+changes initialization and run name only; it does not replace the selected
+baseline or establish a performance claim. Completed-epoch resume restores its
+own saved weights without reapplying initialization. It has no recipe
 setting for initializing a fresh fit from a kelp bundle. Bundle loading supports
 inference; it is not a fine-tuning command. The complete transfer recipes and
 kelp-initialized fitting remain planned under Task 039. Keep fixed
@@ -154,6 +165,16 @@ Select checkpoints using validation only. Keep a best checkpoint and an exact
 recovery checkpoint as distinct artifacts. Record whether inference uses raw or
 averaged weights; preserve EMA semantics if retained. Test save/load and resume
 locally, including the difference from new fine-tuning initialization.
+
+The [DINOv3 comparison](guides/training.md#dinov3-false-color-comparison) uses
+web-pretrained ViT-S/16 and ConvNeXt-Tiny encoders with fresh decoders and
+NIR/red/green false-color or native eight-band inputs. It retains fixed Planet raw normalization,
+matches B0 with physical batch 12 and accumulation 2 (effective 24), and scales encoder
+LR to 0.1 of decoder LR. Reports include the selected eight-band B0 and the
+completed false-color B0 `planet3-cabc-b0-spectral-037b-70ep-20261110T195653341372Z`
+(epoch 46 EMA) on matching validation chips. Both remain practical references;
+this is not an isolated initialization comparison. Neither training nor baseline
+replacement is automatic.
 
 ## Preprocessing and training policy
 

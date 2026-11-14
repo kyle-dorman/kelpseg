@@ -6,7 +6,8 @@ import tomllib
 from dataclasses import dataclass, fields, replace
 from pathlib import Path
 
-from kelpseg.models import SUPPORTED_ENCODERS
+from kelpseg.dinov3 import DINO_ENCODERS
+from kelpseg.models import SUPPORTED_ENCODERS, validate_model_weights
 from kelpseg.preprocessing import BAND_NAMES, CLIP_VALUE, MEAN, STD
 from kelpseg.training.loss_settings import (
     DEFAULT_LOSSES,
@@ -44,6 +45,7 @@ class TrainingSettings:
     checkpoint_epochs: tuple[int, ...] = ()
     seed: int = 42
     learning_rate: float = 3e-4
+    encoder_lr_scale: float = 1.0
     min_lr: float = 3e-5
     betas: tuple[float, float] = (0.9, 0.95)
     weight_decay: float = 0.01
@@ -55,6 +57,7 @@ class TrainingSettings:
     deterministic: bool = True
     encoder_name: str = "mit_b3"
     encoder_weights: str | None = "imagenet"
+    model_weights: str | None = None
     num_workers: int = 8
     pin_memory: bool = True
     persistent_workers: bool = True
@@ -149,8 +152,17 @@ class TrainingSettings:
             raise ValueError("CPU smoke recipes require precision = '32-true'.")
         if self.encoder_name not in SUPPORTED_ENCODERS:
             raise ValueError(f"encoder_name must be one of {SUPPORTED_ENCODERS}.")
-        if self.encoder_weights not in (None, "imagenet"):
-            raise ValueError("encoder_weights must be 'imagenet' or 'none'.")
+        if (
+            type(self.encoder_lr_scale) not in (int, float)
+            or not math.isfinite(self.encoder_lr_scale)
+            or not 0 < self.encoder_lr_scale <= 1
+        ):
+            raise ValueError("encoder_lr_scale must be a finite number in (0, 1].")
+        if self.encoder_name in DINO_ENCODERS and len(self.band_names) not in (3, 8):
+            raise ValueError("DINOv3 experiments require three or eight input bands.")
+        validate_model_weights(
+            self.encoder_name, self.encoder_weights, self.model_weights
+        )
         for name in ("limit_train_batches", "limit_val_batches"):
             value = getattr(self, name)
             if not (

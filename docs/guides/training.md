@@ -102,6 +102,173 @@ inspect `report["confusion_matrix"].sum()` for scored support, and never treat
 zero-support output as evidence of model performance. These helpers provide no
 epoch loop, optimizer policy or checkpoint selection.
 
+## OpenEarthMap B0 initialization comparison
+
+Use [the OpenEarthMap recipe](../../configs/train/initialization/openearthmap_b0.toml)
+to test a segmentation-trained encoder **and decoder** against the
+[selected ImageNet-encoder baseline](../../configs/train/model_size/b0.toml).
+The recipes differ only in run name and initialization. Both use native eight
+bands, with-BC assignments, the same normalization/augmentation, BCE + Dice,
+seed, learning rate, batch size, 70-epoch budget, early stopping and EMA policy.
+The current selected model is unchanged; no improvement is established by adding
+this option. Compare validation-selected models on matching coverage, and keep
+test results out of recipe/checkpoint selection.
+
+The new recipe explicitly sets:
+
+```toml
+encoder_name = "mit_b0"
+encoder_weights = "none"
+model_weights = "openearthmap_b0"
+```
+
+`model_weights` is optional. The OpenEarthMap choice is `"openearthmap_b0"`;
+[the ADE20K choices](#ade20k-b0-initialization-comparison) are described below.
+It requires B0 and disabled ImageNet loading; incompatible choices fail before
+model construction. For Python, use `encoder_weights=None` with the same
+`model_weights` value. Other recipes retain their existing initialization.
+
+Check the machine paths in `paths.local.toml`, then preview the comparison:
+
+```bash
+uv run --frozen kelpseg train --recipe configs/train/initialization/openearthmap_b0.toml --dry-run
+```
+
+The preview reads manifests, prints the resolved initialization source/revision,
+inputs and budget, and creates no run or model download. When ready to launch a
+new experiment, the same command without `--dry-run` starts fitting. Do not use
+`--resume` to initialize from OpenEarthMap: this is a fresh run with fresh
+optimizer, scheduler and EMA state.
+
+First model construction downloads `model.safetensors` from
+[`boehnen/satlens-segformer`](https://huggingface.co/boehnen/satlens-segformer/tree/19cdd879e535d76e7fcbbd1e8b54dac9c1da90d6),
+revision `19cdd879e535d76e7fcbbd1e8b54dac9c1da90d6` (MIT). The ordinary Hugging Face
+cache stores it outside Git; `HF_HOME` can relocate that cache. First use needs
+network access unless the pinned artifact is already cached. Run and exported
+bundle metadata record the source, revision and transfer policy. Existing
+completed-epoch resume restores its saved weights without downloading or
+reapplying initialization; exported bundles remain self-contained and offline.
+
+The source model has RGB inputs and nine output classes. The importer retains
+all encoder/decoder parameters and normalization buffers, discards its output
+classifier, and preserves our fresh one-logit kelp head. Four/eight inputs repeat
+RGB kernels cyclically and scale by 3/channel-count, matching the ImageNet
+baseline policy; this is positional initialization, not a physical-band mapping.
+Three inputs retain the source kernels. We retain Planet normalization rather
+than applying the source RGB image processor.
+
+This transfers weights into the **existing SMP architecture**, including its
+normalization epsilon, decoder regularization and upsampling conventions. It is
+not exact numerical reproduction of the original Hugging Face model. No
+Transformers runtime or new prediction architecture is required.
+
+### Run training and matching validation reports in tmux
+
+The root-level [Bash runner](../../run_openearthmap_comparison.sh) trains the
+OpenEarthMap recipe, reuses the selected ImageNet B0 epoch-16 EMA model, and
+creates fresh validation predictions and reports for both models. It does not
+retrain the baseline. Each phase stops on failure; it has no partial-work reuse.
+
+From an existing tmux shell on the configured GPU host:
+
+```bash
+bash /home/sky/kelpseg/run_openearthmap_comparison.sh
+```
+
+The runner changes to its checkout directory itself. To check inputs without
+starting training, prediction, report generation or a weight download:
+
+```bash
+bash /home/sky/kelpseg/run_openearthmap_comparison.sh --check
+```
+
+It reads `paths.local.toml`, uses the selected baseline under
+`<data_root>/model-size-runs/`, and creates
+`<data_root>/comparisons/openearthmap-b0-<UTC timestamp>/`. An optional absolute
+output-directory argument overrides that destination; it must not exist.
+`BASELINE_RUN` may point to another location of the same complete selected run.
+Preflight checks the actual saved baseline settings against the new recipe,
+matching chip/assignment paths, the epoch-16 EMA bundle and CUDA availability.
+The existing recipe enables W&B at `kdorman90-ucla/kelpseg`.
+
+Training and reporting output goes directly to the terminal, preserving live
+progress in tmux. The runner does not pipe or capture console output.
+The comparison directory contains `training-result.json` with
+the exact new run directory, per-model report recipes,
+`baseline-report/report.html`, `openearthmap-report/report.html`, and
+`comparison.csv` / `comparison.md`. The last two show pooled validation metrics
+and OpenEarthMap-minus-baseline differences after checking matching source/window
+identities and scored support. Predictions remain available beside the reports.
+Training checkpoints and the selected candidate bundle stay in the normal
+`runs_root` run folder. Baseline artifacts are read-only.
+
+Only validation data are predicted/reported. Both models were selected with
+validation IoU, so the comparison is a validation diagnostic, not an independent
+test estimate. Training and inference require CUDA; reporting runs on CPU.
+All outputs are local until separately backed up.
+
+## ADE20K B0 initialization comparison
+
+Two recipes isolate whether a segmentation-trained encoder helps and whether
+also transferring its decoder adds value:
+
+| Recipe | `model_weights` | Loaded components | Fresh components |
+|---|---|---|---|
+| [Encoder only](../../configs/train/initialization/ade20k_b0_encoder.toml) | `ade20k_b0_encoder` | ADE20K-trained encoder | Decoder and binary kelp output |
+| [Encoder and decoder](../../configs/train/initialization/ade20k_b0_full.toml) | `ade20k_b0_full` | ADE20K-trained encoder and decoder | Binary kelp output |
+
+Both require `encoder_name = "mit_b0"` and `encoder_weights = "none"`. Both
+use the **same segmentation-trained encoder**, not the ImageNet-only MiT weights.
+All parameters remain trainable. The recipes otherwise match the selected
+[ImageNet B0 baseline](../../configs/train/model_size/b0.toml): eight bands,
+with-BC assignments, native normalization, augmentation, BCE + Dice, seed, LR,
+batching, 70-epoch budget, early stopping and EMA. Each starts a new run with
+fresh optimizer/scheduler/EMA state and a distinct W&B name.
+
+Source: [`nvidia/segformer-b0-finetuned-ade-512-512`](https://huggingface.co/nvidia/segformer-b0-finetuned-ade-512-512/tree/489d5cd81a0b59fab9b7ea758d3548ebe99677da),
+revision `489d5cd81a0b59fab9b7ea758d3548ebe99677da`, `model.safetensors`.
+First use downloads through the ordinary external Hugging Face cache. The
+150-class source classifier is discarded. Input kernels use the same cyclic
+RGB expansion and 3/channel-count scaling as the baseline. Encoder-only transfer
+preserves every initial decoder parameter/buffer; full transfer includes decoder
+normalization buffers. Run/bundle metadata record which components were loaded.
+SMP normalization epsilon, regularization and upsampling remain unchanged; this
+is weight transfer rather than exact reproduction of Hugging Face predictions.
+Saved bundles and completed-epoch resume do not need initialization downloads.
+
+The separate [ADE20K runner](../../run_ade20k_comparison.sh) leaves the
+OpenEarthMap runner unchanged. After the current experiment finishes, run it in
+an existing tmux shell:
+
+```bash
+bash /home/sky/kelpseg/run_ade20k_comparison.sh
+```
+
+For read-only input/recipe/GPU checks without downloads or output creation:
+
+```bash
+bash /home/sky/kelpseg/run_ade20k_comparison.sh --check
+```
+
+It runs encoder-only training, then full training in separate processes, then
+fresh validation predictions/reports for the selected ImageNet baseline and both
+ADE20K models. Terminal output is direct: no `tee` or console capture. A failed
+step stops the sequence; partial-output reuse is not supported. The script is
+prepared for manual execution and does not automatically wait for another run.
+
+Default results live under
+`<data_root>/comparisons/ade20k-b0-<UTC timestamp>/`; an optional absolute output
+argument overrides this and must be fresh. `BASELINE_RUN` can relocate the same
+selected baseline. The two `*-training-result.json` files retain the exact run
+paths under `runs_root`. Open `comparison.md` or `comparison.csv` for both
+variants' differences from baseline and the full-minus-encoder difference.
+Individual HTML reports are under `baseline-report/`, `ade20k-encoder-report/`
+and `ade20k-full-report/`, with their predictions and report recipes alongside.
+Matching source/window identities, scored support and threshold are required
+before presenting deltas. No held-out test predictions are generated: these are
+validation diagnostics for validation-selected models, not independent test
+estimates. All outputs remain local until separately backed up.
+
 ## Configurable loss experiments
 
 Recipes without `losses` retain 0.7 BCE with 0.1 smoothing + 0.3 Lovasz.
@@ -400,9 +567,81 @@ Only validation regions appear; training-only BC regions do not acquire validati
 scores. Global `val/iou` remains the checkpoint-selection metric.
 
 
+## DINOv3 false-color comparison
+
+The DINOv3 comparison now runs four experiments with fresh SegFormer decoders
+and binary heads:
+
+| Encoder | False color (NIR/red/green) | Native eight bands |
+|---|---|---|
+| ViT-S/16 | [recipe](../../configs/train/dinov3/vits16.toml) | [recipe](../../configs/train/dinov3/vits16_planet8.toml) |
+| ConvNeXt-Tiny | [recipe](../../configs/train/dinov3/convnext_tiny.toml) | [recipe](../../configs/train/dinov3/convnext_tiny_planet8.toml) |
+
+Both spectral variants use the existing native eight-band chips and identical
+source assignments. The encoders were pretrained on RGB web imagery. False color
+reassigns the three kernels positionally to NIR/red/green. Eight-band inputs repeat
+the RGB kernels cyclically and scale them by 3/8, following our B0 adaptation
+policy. This is not multispectral pretraining; all encoder weights are fine-tuned.
+
+All four retain the approved per-band raw means/stds and cap of 5000. These are
+Planet normalized inputs, not percentile-stretched pictures or the checkpoint's
+RGB display normalization. Bundles store exact ordered bands and preprocessing.
+
+Use `encoder_weights = "dinov3"` with `dinov3_vits16` or
+`dinov3_convnext_tiny`; `"none"` builds an offline random model. Supported input
+counts are 3 and 8. ImageNet/B0 segmentation weight options cannot be combined with
+these encoders. Sources and revisions are pinned in `dinov3.py` and recorded in
+run/bundle metadata. The initial download uses the standard Hugging Face cache;
+exported bundles and completed-epoch resume reconstruct offline. Sources retain
+the [DINOv3 license](https://github.com/facebookresearch/dinov3/blob/main/LICENSE).
+
+The decoder peak LR is 0.00015 and floor 0.000003. `encoder_lr_scale = 0.1`
+scales both for the encoder (0.000015 and 0.0000003); existing recipes default
+to 1. All four use batch 12 and accumulation 2 (effective 24), 70 epochs maximum,
+patience 20, seed 42, BCE/Dice, with-BC assignments and validation-only selection.
+These match B0's physical batch and accumulation. Bounded RTX 3090 probes at
+512 pixels with bf16 mixed precision passed for all four: peak PyTorch reserved
+memory was 6.08/6.96 GiB for false-color ViT/ConvNeXt and 6.18/7.04 GiB for
+eight-band ViT/ConvNeXt. Checks included three AdamW updates, EMA copies/updates
+and validation. Synthetic inputs establish memory fit, not model quality or
+full-run completion time.
+
+Run the read-only preflight, then launch in an existing tmux shell when ready:
+
+```bash
+cd /home/sky/kelpseg
+bash run_dinov3_comparison.sh --check
+bash run_dinov3_comparison.sh
+```
+
+The [runner](../../run_dinov3_comparison.sh) trains all four in separate processes,
+then generates fresh float32 validation predictions and HTML reports for the
+four candidates and **both existing B0 references**. It does not retrain B0:
+
+- Eight-band: `planet8-cabc-size-b0-bparams-70ep-20261106T085748896218Z`,
+  selected epoch 16 EMA.
+- False color: [`planet3-cabc-b0-spectral-037b-70ep-20261110T195653341372Z`](https://wandb.ai/kdorman90-ucla/kelpseg/runs/planet3-cabc-b0-spectral-037b-70ep-20261110T195653341372Z),
+  selected epoch 46 EMA.
+
+`BASELINE_RUN` and `FALSE_COLOR_RUN` may relocate those same fixed reference
+runs. `comparison.md`/CSV and six HTML reports go under the configured external
+data root's `comparisons/` directory; an optional absolute positional path selects
+a fresh directory. Terminal progress remains direct, without `tee`. A failed step
+stops the sequence; partial work is not reused.
+
+The report requires matching validation windows and scored support. Compare
+each candidate with the same-band B0 reference and compare spectral variants
+within each DINOv3 encoder. Differences from B0 still include capacity, initialization
+and encoder LR; they do not isolate pretraining alone. All scores are
+validation diagnostics; test data remain held out. Neither baseline is replaced
+automatically. Historical full-TIFF spectral scores use a different coverage
+scope; this runner recomputes all six on matching disjoint validation chips.
+
 ## Encoder size and retained epoch checkpoints
 
-`encoder_name` accepts `mit_b0`, `mit_b1`, `mit_b2`, and `mit_b3` (generic default).
+`encoder_name` accepts `mit_b0`, `mit_b1`, `mit_b2`, `mit_b3` (generic default),
+`dinov3_vits16`, and `dinov3_convnext_tiny`. See the
+[DINOv3 experiment](#dinov3-false-color-comparison) for its three- and eight-band inputs.
 The selected size is saved with settings, checkpoints and portable models;
 changing it requires a fresh training run. Bundles restore their recorded size
 offline.

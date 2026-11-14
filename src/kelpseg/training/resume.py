@@ -13,6 +13,11 @@ from lightning.pytorch.callbacks import Callback, EarlyStopping, ModelCheckpoint
 def build_resume_identity(settings, inputs):
     """Compare ordinary settings and selected metadata, allowing root relocation."""
     recipe = asdict(settings)
+    # An omitted optional initializer leaves existing baseline identities intact.
+    if recipe["model_weights"] is None:
+        recipe.pop("model_weights")
+    if recipe["encoder_lr_scale"] == 1.0:
+        recipe.pop("encoder_lr_scale")
     for name in ("paths_file", "chips", "assignments"):
         recipe.pop(name)
     memberships = {}

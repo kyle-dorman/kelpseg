@@ -13,6 +13,7 @@ import torch
 from albumentations import Compose
 
 from kelpseg.bands import resolve_band_indices
+from kelpseg.initialization import initialization_metadata
 from kelpseg.models import SUPPORTED_ENCODERS, build_model
 from kelpseg.preprocessing import BAND_NAMES, CLIP_VALUE, MEAN, STD, native_validity
 from kelpseg.training.transforms import build_input_transform
@@ -52,6 +53,12 @@ def export_model_bundle(
         "format_version": 1,
         "architecture": "segformer",
         "encoder": settings.encoder_name,
+        "initialization": initialization_metadata(
+            settings.encoder_weights,
+            settings.model_weights,
+            settings.encoder_name,
+            len(settings.band_names),
+        ),
         "classes": 1,
         "band_names": list(settings.band_names),
         "clip_value": settings.clip_value,

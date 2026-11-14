@@ -19,8 +19,18 @@ from kelpseg.training.settings import TrainingSettings
 from kelpseg.training.visuals import EpochImages
 
 
-def parameter_groups(model):
-    """Exclude biases and normalization parameters from AdamW decay."""
+def parameter_groups(
+    model: nn.Module,
+    *,
+    learning_rate: float | None = None,
+    encoder_lr_scale: float = 1.0,
+) -> list[dict]:
+    """Exclude biases/norms from decay and optionally scale encoder learning rates.
+
+    A scale of one retains the existing two-group optimizer layout for baseline
+    checkpoint compatibility. A smaller scale partitions each decay group into
+    encoder and decoder parameters, retaining the scale through LR scheduling.
+    """
     norm_types = (
         nn.BatchNorm1d,
         nn.BatchNorm2d,
@@ -38,7 +48,7 @@ def parameter_groups(model):
             no_decay.update(id(parameter) for parameter in module.parameters())
         if getattr(module, "bias", None) is not None:
             no_decay.add(id(module.bias))
-    return [
+    groups = [
         {
             "params": [
                 p
@@ -53,6 +63,32 @@ def parameter_groups(model):
             "weight_decay": 0.0,
         },
     ]
+
+    if encoder_lr_scale == 1.0:
+        return groups
+    if learning_rate is None or not hasattr(model, "encoder"):
+        raise ValueError(
+            "Scaled encoder learning rate requires a model encoder and learning_rate."
+        )
+    encoder_ids = {id(parameter) for parameter in model.encoder.parameters()}
+    scaled_groups = []
+    for group in groups:
+        for is_encoder, scale in ((True, encoder_lr_scale), (False, 1.0)):
+            parameters = [
+                parameter
+                for parameter in group["params"]
+                if (id(parameter) in encoder_ids) == is_encoder
+            ]
+            if parameters:
+                scaled_groups.append(
+                    {
+                        **group,
+                        "params": parameters,
+                        "lr": learning_rate * scale,
+                        "lr_scale": scale,
+                    }
+                )
+    return scaled_groups
 
 
 class TrainingModule(pl.LightningModule):
@@ -74,6 +110,7 @@ class TrainingModule(pl.LightningModule):
             else build_model(
                 len(settings.band_names),
                 encoder_weights=settings.encoder_weights,
+                model_weights=settings.model_weights,
                 encoder_name=settings.encoder_name,
             )
         )
@@ -249,7 +286,11 @@ class TrainingModule(pl.LightningModule):
     def configure_optimizers(self):
         settings = self.settings
         optimizer = torch.optim.AdamW(
-            parameter_groups(self.model),
+            parameter_groups(
+                self.model,
+                learning_rate=settings.learning_rate,
+                encoder_lr_scale=settings.encoder_lr_scale,
+            ),
             lr=settings.learning_rate,
             betas=tuple(settings.betas),
             weight_decay=settings.weight_decay,

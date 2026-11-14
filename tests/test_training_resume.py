@@ -269,6 +269,18 @@ def test_resume_identity_and_boundary_errors(tmp_path):
         "excluded_training_rows": [],
     }
     identity = build_resume_identity(settings, inputs)
+    # Existing ImageNet/random runs keep their prior identity schema.
+    assert "model_weights" not in identity["settings"]
+    initialized = replace(
+        settings,
+        encoder_name="mit_b0",
+        encoder_weights=None,
+        model_weights="openearthmap_b0",
+    )
+    assert (
+        build_resume_identity(initialized, inputs)["settings"]["model_weights"]
+        == "openearthmap_b0"
+    )
     rows[0]["payload"] = "/new/image.npz"
     relocated = replace(
         settings, paths_file="elsewhere", chips="elsewhere", assignments="elsewhere"

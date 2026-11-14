@@ -12,7 +12,21 @@ assignment/window-selection functions and streaming training-image pixel
 statistics. Installed model/input helpers connect these manifests to
 SegFormer B0/B1/B2/B3 (`mit_b0` through `mit_b3`) with 8/4/3 inputs and one logit.
 B3 is the constructor default; the [selected recipe](experiments.md#current-planet-8-band-b0-baseline)
-uses B0 with ordinary BCE plus Dice. `training/data.py`
+uses B0 with ordinary BCE plus Dice. Optional `model_weights="openearthmap_b0"`
+imports a pinned RGB segmentation-trained encoder and decoder through
+`openearthmap.py`. `ade20k.py` supports ADE20K encoder-only and encoder/decoder
+transfer. Both use the plain B0 conversion/input-adaptation functions in
+`segformer_weights.py`, retain the SMP architecture and a fresh binary head,
+and describe loaded components through `initialization.py`.
+`dinov3.py` adds timm DINOv3 ViT-S/16 and ConvNeXt-Tiny encoders with fresh
+SMP SegFormer decoders and three- or eight-channel inputs. ViT features come from blocks
+3/6/9/12 at stride 16; ConvNeXt uses its four native feature stages. The decoder
+projects and resizes features to quarter resolution before binary prediction
+and full-resolution upsampling. False-color recipes use NIR/red/green;
+eight-band recipes use native band order and repeat/scale RGB kernels by 3/8.
+Source/revision metadata are descriptive; bundle reconstruction never fetches
+initialization weights. See the [initialization recipe](guides/training.md#openearthmap-b0-initialization-comparison).
+`training/data.py`
 loads kelp-positive training rows and representative validation; test rows stay
 metadata only. Shared preprocessing and the approved stock augmentation factory
 feed float32 tensors through an Albumentations Compose ending in Normalize

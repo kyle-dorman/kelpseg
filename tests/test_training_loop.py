@@ -20,6 +20,7 @@ def settings(epochs=2):
         epochs=epochs,
         warmup_epochs=1,
         learning_rate=0.03,
+        encoder_lr_scale=1.0,
         min_lr=0.003,
         betas=(0.9, 0.95),
         weight_decay=0.01,
