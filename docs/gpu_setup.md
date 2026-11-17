@@ -123,10 +123,14 @@ rclone lsd kelp-box:kelpseg/data
 ## 8. Download testing and training data — on the instance
 
 Use `/home/sky/data` as the artifact root on this instance, outside the checkout.
-Allow space for **65.6 GB of chips**, the small controls/tiny example, the Python
-environment/model cache, and future checkpoints. Check available space with
-`df -h /home/sky`. Treat this home-directory storage as temporary. Back up production outputs
-to Box before stopping or deleting the instance.
+Allow about **71.4 GB** for chips and the default download of full-size baseline
+validation and test TIFFs (5.8 GB of cleaned images and aligned labels). For
+leave-one-region-out (LORO) work, set `tiff_scope=loro` below to download the
+complete cleaned release and budget **84.3 GB**. Every region serves as test
+in one fold. Allow additional space for the tiny example, the Python
+environment and model cache, and future checkpoints. Check available space
+with `df -h /home/sky`. Treat this storage as temporary and back up production
+outputs to Box before stopping or deleting the instance.
 
 The root may already exist, but each release destination below must be fresh.
 The copy block stops at the first error; for an incomplete transfer, inspect the
@@ -136,31 +140,72 @@ failure before continuing.
 (
   set -e
   data_root=/home/sky/data
-  for release in data/chips/ca_bc/v1 data/splits/ca_bc/v1 data/collections/ca_bc/v1; do
+  tiff_scope=baseline  # Set to loro for the complete cleaned release.
+  cleaned=data/3_cleaned/ca_bc/v1
+  releases=(
+    data/chips/ca_bc/v1
+    data/splits/ca_bc/v1
+    data/collections/ca_bc/v1
+  )
+  case "$tiff_scope" in
+    baseline|loro) ;;
+    *) printf 'Choose tiff_scope=baseline or tiff_scope=loro.\n' >&2; exit 1 ;;
+  esac
+  for release in "${releases[@]}" "$cleaned"; do
     if test -e "$data_root/$release"; then
       printf 'Release destination already exists: %s\n' "$data_root/$release" >&2
       exit 1
     fi
   done
   mkdir -p "$data_root/runs"
-  for release in data/chips/ca_bc/v1 data/splits/ca_bc/v1 data/collections/ca_bc/v1; do
+  for release in "${releases[@]}"; do
     rclone copy "kelp-box:kelpseg/$release" "$data_root/$release" \
       --immutable --size-only --ignore-checksum --transfers 1 --checkers 2 --progress
   done
+
+  if [[ "$tiff_scope" == loro ]]; then
+    rclone copy "kelp-box:kelpseg/$cleaned" "$data_root/$cleaned" \
+      --immutable --size-only --ignore-checksum --transfers 1 --checkers 2 --progress
+  else
+    tiff_paths_file=$(mktemp)
+    trap 'rm "$tiff_paths_file"' EXIT
+    uv run --frozen python - "$data_root/data/splits/ca_bc/v1/assignments.csv" > "$tiff_paths_file" <<'PY'
+import csv
+import sys
+
+with open(sys.argv[1], newline="", encoding="utf-8") as assignments:
+    source_ids = {
+        row["source_id"]
+        for row in csv.DictReader(assignments)
+        if row["experiment"] == "baseline" and row["split"] in {"val", "test"}
+    }
+if not source_ids:
+    sys.exit("No baseline validation or test sources found in assignments.csv.")
+for source_id in sorted(source_ids):
+    print(f"images/{source_id}.tif")
+    print(f"labels/{source_id}.tif")
+PY
+    rclone copy "kelp-box:kelpseg/$cleaned" "$data_root/$cleaned" \
+      --files-from "$tiff_paths_file" \
+      --immutable --size-only --ignore-checksum --transfers 1 --checkers 2 --progress
+  fi
 )
 ```
 
-The [published release inventory](reference/ca_bc_release.md#chip-split-and-collection-cabc-v1)
-owns expected counts/sizes. This fetch includes test chips as part of the
-canonical release; setup and training checks must not open their arrays.
-Raw archives and cleaned TIFFs are unnecessary for chip-based training;
-source-TIFF prediction/reporting needs the separate cleaned release. Fetch and
-prepare the tiny example separately under a fresh root using the
+The [chip release inventory](reference/ca_bc_release.md#chip-split-and-collection-cabc-v1)
+and [cleaned release inventory](reference/ca_bc_release.md#cleaned-cabc-v1) list
+the complete releases. The default TIFF download contains 111 image/label
+pairs selected from the published validation and test assignments for both
+baseline variants. The LORO option also stages the cleaned release metadata.
+Use the downloaded split assignments to select sources for your evaluation.
+Keep test data reserved for held-out evaluation.
+Fetch and prepare the tiny example separately under a fresh root using the
 [tiny walkthrough](quickstart.md); step 10 uses that walkthrough root for its
-bounded CUDA check. Production recipes use the full-release root above.
+bounded CUDA check. Production recipes use the artifact root above.
 
 The project-relative release layout is preserved, so chips live at
-`/home/sky/data/data/chips/ca_bc/v1`; the repeated `data` is intentional.
+`/home/sky/data/data/chips/ca_bc/v1` and cleaned TIFFs live under
+`/home/sky/data/data/3_cleaned/ca_bc/v1`. The repeated `data` is intentional.
 Training outputs live under `/home/sky/data/runs`.
 
 Create ignored `paths.local.toml` in the checkout:

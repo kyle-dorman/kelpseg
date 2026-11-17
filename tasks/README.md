@@ -86,7 +86,7 @@ are authorized by Task 024.
 | [037E](037e_documentation_cleanup.md) | Documentation only | Complete; reviewed |
 | [038](038_methods_documentation.md) | Documentation only | Complete |
 | [038A](038a_ci_help_text.md) | CI test repair | Complete |
-| [038B](038b_repository_naming.md) | Documentation naming | Complete |
+| [038B](038b_repository_naming.md) | Documentation naming / rename verification | Complete |
 | [038C](038c_openearthmap_initialization.md) | Model initialization / comparison recipe | Complete; implementation retired |
 | [038D](038d_openearthmap_comparison_runner.md) | Bash experiment/report runner | Complete; implementation retired |
 | [038E](038e_ade20k_initialization.md) | ADE20K initialization / runner | Complete; implementation retired |

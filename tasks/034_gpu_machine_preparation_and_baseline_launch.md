@@ -1416,3 +1416,16 @@ not a claim that all outputs are durable.
 Exact next actions: user pushes the reviewed commit; back up the completed new
 run/analysis roots to Box, then continue small-bed/shore representation work in
 the separate chat. No additional training is scheduled under this closed task.
+
+### Setup documentation follow-up
+
+[GPU setup step 8](../docs/gpu_setup.md#8-download-testing-and-training-data--on-the-instance)
+now stages full-size validation and test image/label TIFFs for both baseline
+variants alongside chips and split controls. The local published assignments
+and TIFF tree confirm 111 pairs at 5.8 GB. For LORO, `tiff_scope=loro` stages the
+entire 18.7 GB cleaned release. Both modes and overwrite refusal passed using
+rclone 1.50.2 against a local fixture built from the release paths and actual
+assignments. The release links and diff were checked. No external artifacts
+changed. Live Box transfers remain untested for this update. On the next host,
+choose the TIFF scope before running step 8 and use the split controls for
+source selection.

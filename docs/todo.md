@@ -8,10 +8,10 @@ and runners are removed. All 975 CPU tests and lint checks passed. See the
 [summary](reference/pretraining_experiments.md) and
 [task](../tasks/038g_retire_pretraining_experiments.md).
 
-Task **038B repository naming is complete**; current instructions use `kelpseg`.
-The [outcome](../tasks/038b_repository_naming.md#outcome) records validation and
-retained historical references. The user authorized committing these text edits;
-repository and checkout renaming remain separate actions.
+Task **038B repository naming and post-rename verification are complete**.
+The renamed checkout and GitHub remote work; all 975 CPU tests and lint checks
+passed. The [verification record](../tasks/038b_repository_naming.md#post-rename-verification--2026-11-12)
+records scope and limitations. Verification documentation remains uncommitted.
 
 Task **038A CI help-text checks is complete**; its
 [outcome](../tasks/038a_ci_help_text.md#outcome) records the fix and 20 passing
@@ -41,6 +41,9 @@ slots 038 and 039; historical task numbering is retained as evidence.
 
 ## Open follow-ups
 
+- [GPU setup](gpu_setup.md#8-download-testing-and-training-data--on-the-instance)
+  now stages baseline validation and test TIFFs by default, with the full
+  cleaned release available for LORO. Use the updated recipe on the next host.
 - Earlier external experiment/analysis backups have not all been verified;
   [Task 034](../tasks/034_gpu_machine_preparation_and_baseline_launch.md) records
   the affected roots. This is not an instruction to transfer artifacts in 038.
